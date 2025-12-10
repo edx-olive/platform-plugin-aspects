@@ -1,0 +1,39 @@
+{% load i18n %}
+
+<script src="https://unpkg.com/@superset-ui/embedded-sdk"></script>
+
+<div class="aspects-wrapper" width="fit-content">
+    <h2>{{display_name}}</h2>
+
+    {% if exception %}
+    <p>{% trans 'Superset is not configured properly. Please contact your system administrator.'%}</p>
+    <p>{{exception}}</p>
+    {% elif not superset_dashboards %}
+    <p>Dashboard UUID is not set. Please set the dashboard UUID in the Studio.</p>
+    {% elif superset_url %} {% if xblock_id %}
+    <div class="superset-embedded-container" id="superset-embedded-container-{{xblock_id}}"></div>
+    {% else %}
+    <div class="aspects-tabs">
+        {% for dashboard in superset_dashboards %}
+        <div class="aspects-tab">
+            {% if forloop.counter == 1 %}
+            <input type="radio" id="tab-{{forloop.counter}}" name="tab-group-1" checked="checked" />
+            {% else %}
+            <input type="radio" id="tab-{{forloop.counter}}" name="tab-group-1" />
+            {% endif %}
+            <label for="tab-{{forloop.counter}}">{% trans dashboard.name %}</label>
+            <div class="aspects-content superset-embedded-container" id="superset-embedded-container-{{dashboard.uuid}}"></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {{superset_dashboards|json_script:"superset_dashboards"}}
+
+    <script type="text/javascript">
+        window.superset_dashboards = JSON.parse(document.getElementById('superset_dashboards').textContent);
+        window.superset_url = "{{superset_url}}";
+        window.superset_guest_token_url = "{{superset_guest_token_url}}";
+    </script>
+    {% endif %}
+</div>
