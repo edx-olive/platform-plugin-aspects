@@ -230,6 +230,13 @@ class CourseOverviewSink(ModelBaseSink):  # pylint: disable=abstract-method
             - reason why course needs, or does not need, to be dumped (string)
         """
 
+        # --- Start Campus Modification ---
+        # 1. Check if the course ID indicates a CCX course
+        # item.id is the CourseKey, converting to str gives us "ccx-v1:..."
+        if str(item.id).startswith("ccx-v1"):
+            return False, "Skipping: CCX courses are excluded from Aspects"
+        # --- End Campus Modification ---
+
         course_last_dump_time = self.get_last_dumped_timestamp(item)
 
         # If we don't have a record of the last time this command was run,
