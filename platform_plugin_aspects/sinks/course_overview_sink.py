@@ -12,6 +12,7 @@ LTI passwords and other secrets. We just take the fields necessary for reporting
 
 import datetime
 import json
+import logging  # ### DEBUG ADDITION: Import logging
 
 from opaque_keys.edx.keys import CourseKey
 
@@ -22,6 +23,8 @@ from platform_plugin_aspects.utils import (
     get_modulestore,
     get_tags_for_block,
 )
+# ### DEBUG ADDITION: Initialize Logger
+logger = logging.getLogger(__name__)
 
 # Defaults we want to ensure we fail early on bulk inserts
 CLICKHOUSE_BULK_INSERT_PARAMS = {
@@ -231,10 +234,21 @@ class CourseOverviewSink(ModelBaseSink):  # pylint: disable=abstract-method
         """
 
         # --- Start Campus Modification ---
-        # 1. Check if the course ID indicates a CCX course
-        # item.id is the CourseKey, converting to str gives us "ccx-v1:..."
-        if str(item.id).startswith("ccx-v1"):
+        # ### DEBUG ADDITION: Logging execution flow
+        try:
+            # Safely get the string version of the ID to inspect it
+            course_id_str = str(item.id)
+            logger.info(f"[ASPECTS_DEBUG] Checking Course: {course_id_str} | Type: {type(item)}")
+        except Exception as e:
+            # If this fails, we want to know why
+            logger.error(f"[ASPECTS_DEBUG] Error extracting ID from item: {e} | Item: {item}")
+            course_id_str = "unknown"
+
+        if course_id_str.startswith("ccx-v1"):
+            logger.info(f"[ASPECTS_DEBUG] SKIP TRIGGERED for: {course_id_str}")
             return False, "Skipping: CCX courses are excluded from Aspects"
+        else:
+            logger.info(f"[ASPECTS_DEBUG] ALLOWED Course: {course_id_str}")
         # --- End Campus Modification ---
 
         course_last_dump_time = self.get_last_dumped_timestamp(item)
