@@ -222,6 +222,29 @@ class CourseOverviewSink(ModelBaseSink):  # pylint: disable=abstract-method
     nested_sinks = [XBlockSink]
     pk_format = str
 
+    # --- Start Campus Modification: Override dump ---
+    def dump(self, item_id, many=False, initial=None):
+        """
+        Intercept the dump call for real-time publishing signals.
+        """
+        try:
+            # item_id is usually the Course Key string or object here
+            course_id_str = str(item_id)
+            
+            # Use self.log (inherited from BaseSink) so logs appear in the same worker stream
+            self.log.info(f"[ASPECTS_DEBUG] Dump intercepted for: {course_id_str}")
+
+            if course_id_str.startswith("ccx-v1"):
+                self.log.info(f"[ASPECTS_DEBUG] SKIP TRIGGERED for CCX course: {course_id_str}")
+                return # Exits the function, preventing the super().dump() call
+            
+        except Exception as e:
+            self.log.error(f"[ASPECTS_DEBUG] Error checking CCX ID: {e}")
+
+        # Proceed with normal logic for non-CCX courses
+        super().dump(item_id, many, initial)
+    # --- End Campus Modification ---
+    
     def should_dump_item(self, item):
         """
         Only dump the course if it's been changed since the last time it's been
