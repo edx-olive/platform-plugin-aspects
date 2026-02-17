@@ -15,7 +15,6 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from requests.exceptions import HTTPError
-from supersetapiclient.client import SupersetClient
 from xblock.reference.user_service import XBlockUser
 
 logger = logging.getLogger(__name__)
@@ -138,15 +137,42 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
     }
 
     try:
-        client = SupersetClient(
-            host=superset_internal_host,
-            username=superset_username,
-            password=superset_password,
+        import requests
+        
+        # Step 1: Get Bearer Token with provider="db"
+        login_response = requests.post(
+            f"{superset_internal_host}api/v1/security/login",
+            json={
+                "username": superset_username,
+                "password": superset_password,
+                "provider": "db",
+                "refresh": True
+            },
+            verify=False
         )
-        response = client.session.post(
+        login_response.raise_for_status()
+        bearer_token = login_response.json().get("access_token")
+        
+        # Step 2: Get CSRF Token
+        csrf_response = requests.get(
+            f"{superset_internal_host}api/v1/security/csrf_token",
+            headers={"Authorization": f"Bearer {bearer_token}"},
+            verify=False
+        )
+        csrf_response.raise_for_status()
+        csrf_token = csrf_response.json().get("result")
+        
+        # Step 3: Generate Guest Token with CSRF
+        response = requests.post(
             url=f"{superset_internal_host}api/v1/security/guest_token/",
             json=data,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {bearer_token}",
+                "X-CSRFToken": csrf_token,
+                "Referer": superset_internal_host
+            },
+            verify=False
         )
         response.raise_for_status()
         token = response.json().get("token")
