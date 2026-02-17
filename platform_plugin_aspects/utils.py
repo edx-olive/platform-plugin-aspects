@@ -15,7 +15,6 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from requests.exceptions import HTTPError
-from supersetapiclient.client import SupersetClient
 from xblock.reference.user_service import XBlockUser
 
 logger = logging.getLogger(__name__)
@@ -138,18 +137,72 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
     }
 
     try:
-        client = SupersetClient(
-            host=superset_internal_host,
-            username=superset_username,
-            password=superset_password,
+        import requests
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # Step 1: Get Bearer Token with provider="db"
+        login_url = f"{superset_internal_host}api/v1/security/login"
+        login_payload = {
+            "username": superset_username,
+            "password": superset_password,
+            "provider": "db",
+            "refresh": True
+        }
+        logger.info(f"Attempting login to {login_url} with username {superset_username}")
+        
+        login_response = requests.post(
+            login_url,
+            json=login_payload,
+            verify=False
         )
-        response = client.session.post(
+        
+        logger.info(f"Login response status: {login_response.status_code}")
+        logger.info(f"Login response text: {login_response.text[:500]}")
+        
+        login_response.raise_for_status()
+        bearer_token = login_response.json().get("access_token")
+        logger.info("Successfully obtained bearer token")
+        
+        # Step 2: Get CSRF Token and session cookie
+        csrf_response = requests.get(
+            f"{superset_internal_host}api/v1/security/csrf_token",
+            headers={"Authorization": f"Bearer {bearer_token}"},
+            verify=False
+        )
+        csrf_response.raise_for_status()
+        csrf_token = csrf_response.json().get("result")
+        
+        # Extract session cookie
+        session_cookie = None
+        set_cookie_header = csrf_response.headers.get("Set-Cookie", "")
+        if set_cookie_header:
+            for cookie in set_cookie_header.split(";"):
+                if cookie.strip().startswith("session="):
+                    session_cookie = cookie.strip()
+                    break
+        
+        logger.info("Successfully obtained CSRF token and session cookie")
+        
+        # Step 3: Generate Guest Token with CSRF
+        logger.info(f"Requesting guest token with data: {data}")
+        response = requests.post(
             url=f"{superset_internal_host}api/v1/security/guest_token/",
             json=data,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {bearer_token}",
+                "X-CSRFToken": csrf_token,
+                "Cookie": session_cookie if session_cookie else "",
+                "Referer": superset_internal_host
+            },
+            verify=False
         )
+        logger.info(f"Guest token response status: {response.status_code}")
+        logger.info(f"Guest token response text: {response.text[:1000]}")
         response.raise_for_status()
         token = response.json().get("token")
+        logger.info("Successfully generated guest token")
         return token
 
     except HTTPError as err:
