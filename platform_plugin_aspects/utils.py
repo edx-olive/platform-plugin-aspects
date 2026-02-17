@@ -185,6 +185,7 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
         logger.info("Successfully obtained CSRF token and session cookie")
         
         # Step 3: Generate Guest Token with CSRF
+        logger.info(f"Requesting guest token with data: {data}")
         response = requests.post(
             url=f"{superset_internal_host}api/v1/security/guest_token/",
             json=data,
@@ -197,6 +198,8 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
             },
             verify=False
         )
+        logger.info(f"Guest token response status: {response.status_code}")
+        logger.info(f"Guest token response text: {response.text[:1000]}")
         response.raise_for_status()
         token = response.json().get("token")
         logger.info("Successfully generated guest token")
