@@ -141,7 +141,10 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
-        # Step 1: Get Bearer Token with provider="db"
+        session = requests.Session()
+        session.verify = False
+        
+        # Step 1: Get Bearer Token
         login_url = f"{superset_internal_host}api/v1/security/login"
         login_payload = {
             "username": superset_username,
@@ -149,57 +152,37 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
             "provider": "db",
             "refresh": True
         }
-        logger.info(f"Attempting login to {login_url} with username {superset_username}")
+        logger.info(f"Attempting login to {login_url}")
         
-        login_response = requests.post(
-            login_url,
-            json=login_payload,
-            verify=False
-        )
-        
-        logger.info(f"Login response status: {login_response.status_code}")
-        logger.info(f"Login response text: {login_response.text[:500]}")
-        
+        login_response = session.post(login_url, json=login_payload)
         login_response.raise_for_status()
         bearer_token = login_response.json().get("access_token")
         logger.info("Successfully obtained bearer token")
         
-        # Step 2: Get CSRF Token and session cookie
-        csrf_response = requests.get(
+        # Step 2: Get CSRF Token (session cookies are automatically handled)
+        csrf_response = session.get(
             f"{superset_internal_host}api/v1/security/csrf_token",
-            headers={"Authorization": f"Bearer {bearer_token}"},
-            verify=False
+            headers={"Authorization": f"Bearer {bearer_token}"}
         )
         csrf_response.raise_for_status()
         csrf_token = csrf_response.json().get("result")
+        logger.info("Successfully obtained CSRF token")
         
-        # Extract session cookie
-        session_cookie = None
-        set_cookie_header = csrf_response.headers.get("Set-Cookie", "")
-        if set_cookie_header:
-            for cookie in set_cookie_header.split(";"):
-                if cookie.strip().startswith("session="):
-                    session_cookie = cookie.strip()
-                    break
-        
-        logger.info("Successfully obtained CSRF token and session cookie")
-        
-        # Step 3: Generate Guest Token with CSRF
+        # Step 3: Generate Guest Token
         logger.info(f"Requesting guest token with data: {data}")
-        response = requests.post(
+        response = session.post(
             url=f"{superset_internal_host}api/v1/security/guest_token/",
             json=data,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {bearer_token}",
                 "X-CSRFToken": csrf_token,
-                "Cookie": session_cookie if session_cookie else "",
                 "Referer": superset_internal_host
-            },
-            verify=False
+            }
         )
         logger.info(f"Guest token response status: {response.status_code}")
-        logger.info(f"Guest token response text: {response.text[:1000]}")
+        if response.status_code != 200:
+            logger.error(f"Guest token error response: {response.text}")
         response.raise_for_status()
         token = response.json().get("token")
         logger.info("Successfully generated guest token")
@@ -207,15 +190,27 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
 
     except HTTPError as err:
         # Superset server errors sometimes come with messages, so log the response.
-        logger.error(
-            f"{err.response.status_code} {err.response.json()} for url: {err.response.url}, data: {data}"
-        )
-        raise ImproperlyConfigured(
-            _(
-                "Unable to fetch Superset guest token, "
-                "Superset server error {server_response}"
-            ).format(server_response=err.response.json())
-        ) from err
+        try:
+            error_json = err.response.json()
+            logger.error(
+                f"{err.response.status_code} {error_json} for url: {err.response.url}, data: {data}"
+            )
+            raise ImproperlyConfigured(
+                _(
+                    "Unable to fetch Superset guest token, "
+                    "Superset server error {server_response}"
+                ).format(server_response=error_json)
+            ) from err
+        except Exception:
+            logger.error(
+                f"{err.response.status_code} {err.response.text} for url: {err.response.url}, data: {data}"
+            )
+            raise ImproperlyConfigured(
+                _(
+                    "Unable to fetch Superset guest token, "
+                    "Superset server error: {server_response}"
+                ).format(server_response=err.response.text)
+            ) from err
 
     except Exception as exc:
         logger.error(exc)
