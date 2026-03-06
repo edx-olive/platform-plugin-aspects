@@ -133,7 +133,7 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
     data = {
         "user": _superset_user_data(user),
         "resources": resources,
-        "rls": [{"clause": filter} for filter in formatted_filters],
+        "rls": [{"clause": filter, "dataset": 811} for filter in formatted_filters],
     }
 
     try:
@@ -241,13 +241,6 @@ def _superset_user_data(user: XBlockUser) -> dict:
     """
     Return the user properties sent to the Superset API.
     """
-    # We can send more info about the user to superset
-    # but Open edX only provides the full name. For now is not needed
-    # and doesn't add any value so we don't send it.
-    # {
-    #    "first_name": "John",
-    #    "last_name": "Doe",
-    # }
     username = None
     # Django User
     if hasattr(user, "username"):
@@ -258,6 +251,8 @@ def _superset_user_data(user: XBlockUser) -> dict:
 
     return {
         "username": username,
+        "first_name": "Guest",
+        "last_name": "User",
     }
 
 
