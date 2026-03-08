@@ -159,33 +159,41 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
         bearer_token = login_response.json().get("access_token")
         logger.info("Successfully obtained bearer token")
         
-        # Step 2: Get CSRF Token (session cookies are automatically handled)
+        # Step 2: Get CSRF Token and extract session cookie
         csrf_response = session.get(
             f"{superset_internal_host}api/v1/security/csrf_token",
             headers={"Authorization": f"Bearer {bearer_token}"}
         )
         csrf_response.raise_for_status()
         csrf_token = csrf_response.json().get("result")
-        logger.info("Successfully obtained CSRF token")
+        
+        # Extract session cookie from Set-Cookie header
+        session_cookie = None
+        set_cookie_header = csrf_response.headers.get("Set-Cookie", "")
+        if set_cookie_header:
+            for cookie in set_cookie_header.split(";"):
+                if cookie.strip().startswith("session="):
+                    session_cookie = cookie.strip()
+                    break
+        
+        logger.info(f"Successfully obtained CSRF token")
+        logger.info(f"Session cookie: {session_cookie}")
         
         # Step 3: Generate Guest Token
         logger.info(f"Requesting guest token for user: {data['user']['username']}")
-        logger.info(f"Resources: {len(data['resources'])} dashboards")
-        logger.info(f"RLS filters: {data['rls']}")
-        logger.info(f"Session cookies: {session.cookies.get_dict()}")
         response = session.post(
             url=f"{superset_internal_host}api/v1/security/guest_token/",
             json=data,
             headers={
                 "Authorization": f"Bearer {bearer_token}",
                 "X-CSRFToken": csrf_token,
+                "Cookie": session_cookie,
                 "Referer": superset_internal_host.rstrip('/')
             }
         )
         logger.info(f"Guest token response status: {response.status_code}")
         if response.status_code != 200:
             logger.error(f"Guest token error response body: {response.text}")
-            logger.error(f"Guest token request data was: {data}")
         response.raise_for_status()
         token = response.json().get("token")
         logger.info("Successfully generated guest token")
