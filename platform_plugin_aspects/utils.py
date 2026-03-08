@@ -31,7 +31,7 @@ def _(text):
 
 
 DEFAULT_FILTERS_FORMAT = [
-    "org = '{course_id.org}'",
+    "es.org = '{course_id.org}'",
     "course_key = '{course_id}'",
 ]
 
