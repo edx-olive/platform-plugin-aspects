@@ -133,8 +133,10 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
     data = {
         "user": _superset_user_data(user),
         "resources": resources,
-        "rls": [{"clause": filter, "dataset": 811} for filter in formatted_filters],
+        "rls": [{"clause": filter, "dataset": superset_config.get("dataset_id", 811)} for filter in formatted_filters],
     }
+    
+    logger.info(f"RLS rules being sent: {data['rls']}")
 
     try:
         import requests
