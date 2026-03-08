@@ -18,8 +18,12 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: extensions/filters.py:60
-msgid "Reports"
+msgid "Campus BI Reports"
 msgstr "קמפוס BI"
+
+#: templates/instructor_dashboard/aspects.html
+msgid "View dashboards in Superset"
+msgstr "צפה בדשבורדים נוספים"
 
 #: settings/common.py:29
 msgid "Course Dashboard"
