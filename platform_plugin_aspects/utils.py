@@ -172,18 +172,17 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
         logger.info(f"Requesting guest token for user: {data['user']['username']}")
         logger.info(f"Resources: {len(data['resources'])} dashboards")
         logger.info(f"RLS filters: {data['rls']}")
+        logger.info(f"Session cookies: {session.cookies.get_dict()}")
         response = session.post(
             url=f"{superset_internal_host}api/v1/security/guest_token/",
             json=data,
             headers={
-                "Content-Type": "application/json",
                 "Authorization": f"Bearer {bearer_token}",
                 "X-CSRFToken": csrf_token,
-                "Referer": superset_internal_host
+                "Referer": superset_internal_host.rstrip('/')
             }
         )
         logger.info(f"Guest token response status: {response.status_code}")
-        logger.info(f"Guest token response headers: {dict(response.headers)}")
         if response.status_code != 200:
             logger.error(f"Guest token error response body: {response.text}")
             logger.error(f"Guest token request data was: {data}")
