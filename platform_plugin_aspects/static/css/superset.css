@@ -5,6 +5,10 @@
     border: none;
 }
 
+.aspects-wrapper {
+    direction: rtl;
+}
+
 .aspects-tabs {
     position: relative;
     min-height: 920px;

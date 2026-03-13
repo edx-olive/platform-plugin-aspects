@@ -54,7 +54,7 @@ class AddSupersetTab(PipelineStep):
             formatted_language = "en"
 
         context["course_id"] = course.id
-        context["display_name"] = _("Campus BI")
+        context["display_name"] = "קמפוס BI"
         context = generate_superset_context(
             context,
             dashboards=dashboards,
@@ -69,7 +69,7 @@ class AddSupersetTab(PipelineStep):
         section_data = {
             "fragment": frag,
             "section_key": BLOCK_CATEGORY,
-            "section_display_name": _("Campus BI Reports"),
+            "section_display_name": "קמפוס BI",
             "course_id": str(context.get("course_id")),
             "superset_guest_token_url": str(context.get("superset_guest_token_url")),
             "superset_url": str(context.get("superset_url")),
