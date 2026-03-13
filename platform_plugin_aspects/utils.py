@@ -130,10 +130,16 @@ def generate_guest_token(user, course, dashboards, filters) -> str:
                     }
                 )
 
+    rls_rules = [
+        {"clause": filter, "dataset": dashboard["dataset_id"]}
+        for dashboard in dashboards
+        for filter in formatted_filters
+    ]
+    
     data = {
         "user": _superset_user_data(user),
         "resources": resources,
-        "rls": [{"clause": filter, "dataset": dashboard["dataset_id"]} for filter in formatted_filters],
+        "rls": rls_rules,
     }
     
     logger.info(f"RLS rules being sent: {data['rls']}")
