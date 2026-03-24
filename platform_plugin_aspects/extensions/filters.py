@@ -29,6 +29,11 @@ class AddSupersetTab(PipelineStep):
             _ (str): instructor dashboard template name.
         """
         course = context["course"]
+        
+        # Skip adding the tab for CCX courses
+        if str(course.id).startswith('ccx-v1'):
+            return {"context": context}
+        
         dashboards = settings.ASPECTS_INSTRUCTOR_DASHBOARDS
         show_dashboard_link = settings.SUPERSET_SHOW_INSTRUCTOR_DASHBOARD_LINK
 
@@ -49,6 +54,7 @@ class AddSupersetTab(PipelineStep):
             formatted_language = "en"
 
         context["course_id"] = course.id
+        context["display_name"] = "קמפוס BI"
         context = generate_superset_context(
             context,
             dashboards=dashboards,
@@ -63,7 +69,7 @@ class AddSupersetTab(PipelineStep):
         section_data = {
             "fragment": frag,
             "section_key": BLOCK_CATEGORY,
-            "section_display_name": _("Reports"),
+            "section_display_name": "קמפוס BI",
             "course_id": str(context.get("course_id")),
             "superset_guest_token_url": str(context.get("superset_guest_token_url")),
             "superset_url": str(context.get("superset_url")),

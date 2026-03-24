@@ -22,28 +22,18 @@ def plugin_settings(settings):
     """
     settings.MAKO_TEMPLATE_DIRS_BASE.append(ROOT_DIRECTORY / "templates")
     settings.SUPERSET_CONFIG = {
-        "internal_service_url": "http://superset:8088",
+        "service_url": "https://superset.staging.campus.gov.il",
+        "internal_service_url": "http://superset.aspects-stage.svc.cluster.local:8088",
         "username": "superset",
         "password": "superset",
+        "dataset_id": 811,  # Update this with your actual dataset ID
     }
     settings.ASPECTS_INSTRUCTOR_DASHBOARDS = [
         {
             "name": _("Course Dashboard"),
             "slug": "course-dashboard",
-            "uuid": "c0e64194-33d1-4d5a-8c10-4f51530c5ee9",
-            "allow_translations": True,
-        },
-        {
-            "name": _("Individual Learner Dashboard"),
-            "slug": "individual-learner",
-            "uuid": "abae8a25-1ba4-4653-81bd-d3937a162a11",
-            "allow_translations": True,
-        },
-        {
-            "name": _("At-Risk Learners Dashboard"),
-            "slug": "learner-groups",
-            "uuid": "8661d20c-cee6-4245-9fcc-610daea5fd24",
-            "allow_translations": True,
+            "uuid": "12efbfbd-efbf-bdef-bfbd-5d635d33efbf",
+            "allow_translations": False,
         },
     ]
     settings.SUPERSET_SHOW_INSTRUCTOR_DASHBOARD_LINK = True
